@@ -1,0 +1,759 @@
+{
+  "name": "Section 2 - Sales Data Pipeline",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "84a5681e-7a01-432c-828e-9c1d87bb67ce",
+      "name": "TriggerManual"
+    },
+    {
+      "parameters": {
+        "url": "https://learn.app.n8n.cloud/webhook/course/n8n101/sales-data",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Assessment-ID",
+              "value": "b1cfdf5f09d60aa8acfd89fe3d3db9d5"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "6fa1a5e4-0f03-4056-b293-529368d896bf",
+      "name": "GetSalesData",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "A22L96VZ749ng8HE",
+          "name": "n8n Academy API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "orders",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "2b81108a-f1e6-402f-bd99-ea6ef80bd1a0",
+      "name": "SplitOrders"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ff6b4072-d423-44e9-a2d9-9fed5af2f77b",
+              "name": "order_id",
+              "value": "={{ $json.order_id }}",
+              "type": "string"
+            },
+            {
+              "id": "a97c9fb7-0f45-4c4f-880e-9f9741907da2",
+              "name": "customer_name",
+              "value": "={{ $json.customer_name }}",
+              "type": "string"
+            },
+            {
+              "id": "3d9e175c-73f7-46bf-8657-6f01e38e1eb3",
+              "name": "region",
+              "value": "={{ $json.region }}",
+              "type": "string"
+            },
+            {
+              "id": "40f1e6cc-f000-4149-b713-63c59155d2c0",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "8abc5271-8ef7-4390-a004-a33e70f6e32c",
+              "name": "order_total",
+              "value": "={{ $json.quantity *  $json.unit_price }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        0
+      ],
+      "id": "8c8c91b8-f72d-44f3-ae73-d96da651def5",
+      "name": "SetOrderTotals"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "=orders",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "dfbe9bf4-78ed-4976-9b11-4856cb7aa2b3",
+      "name": "AggregateOrders"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://learn.app.n8n.cloud/webhook/course/n8n101/process-orders",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Assessment-ID",
+              "value": "b1cfdf5f09d60aa8acfd89fe3d3db9d5"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "orders",
+              "value": "={{ $json.orders }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "b8d973da-0f68-4227-96d8-93aff2680c79",
+      "name": "SendOrders",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "A22L96VZ749ng8HE",
+          "name": "n8n Academy API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b1fe1635-a97d-4769-b837-c2682da650fd",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "delivered",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        768,
+        272
+      ],
+      "id": "99b57455-b9af-4104-82a2-80766266c860",
+      "name": "FilterDelivered"
+    },
+    {
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [
+            {
+              "aggregation": "sum",
+              "field": "order_total"
+            },
+            {
+              "field": "order_total"
+            },
+            {
+              "aggregation": "average",
+              "field": "order_total"
+            }
+          ]
+        },
+        "fieldsToSplitBy": "region",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.summarize",
+      "typeVersion": 1.1,
+      "position": [
+        1072,
+        288
+      ],
+      "id": "f3a36d0f-79d1-421a-8c0e-f847a2aeb3f8",
+      "name": "SummarizeByRegion"
+    },
+    {
+      "parameters": {
+        "keys": {
+          "key": [
+            {
+              "currentKey": "sum_order_total",
+              "newKey": "order_totals"
+            },
+            {
+              "currentKey": "count_order_total",
+              "newKey": "order_count"
+            },
+            {
+              "currentKey": "average_order_total",
+              "newKey": "average_order_total"
+            },
+            {
+              "currentKey": "="
+            }
+          ]
+        },
+        "additionalOptions": {}
+      },
+      "type": "n8n-nodes-base.renameKeys",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        192
+      ],
+      "id": "139eb724-54be-4df2-badc-1a084aaccfda",
+      "name": "UpdateFieldNames"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "regions",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        192
+      ],
+      "id": "d3f0b0dc-6b58-4d00-9f22-173e7ec08d7d",
+      "name": "AggregateRegions"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://learn.app.n8n.cloud/webhook/course/n8n101/validate-analysis",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Assessment-ID",
+              "value": "b1cfdf5f09d60aa8acfd89fe3d3db9d5"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "regions",
+              "value": "={{ $json.regions }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1664,
+        176
+      ],
+      "id": "7ab9aaa2-f7d4-47ae-97ec-213c33907b16",
+      "name": "SendAnalysis",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "A22L96VZ749ng8HE",
+          "name": "n8n Academy API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "38b90a49-3f7f-4857-8b1a-89d9312a0e04",
+              "name": "report_generated",
+              "value": "={{ $now.format('yyyy-MM-dd HH:mm:ss') }}",
+              "type": "string"
+            },
+            {
+              "id": "1f751099-3836-4cb6-9f82-15b53ebf9b1a",
+              "name": "assessment_id",
+              "value": "b1cfdf5f09d60aa8acfd89fe3d3db9d5",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1472,
+        352
+      ],
+      "id": "6dadfa53-5b3d-4a02-bc64-0351233babc4",
+      "name": "SetReportMetadata"
+    },
+    {
+      "parameters": {
+        "binaryPropertyName": "report",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1616,
+        368
+      ],
+      "id": "1a376f06-77fb-48d7-8271-9fc277218dab",
+      "name": "ConvertToCSV"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://learn.app.n8n.cloud/webhook/course/n8n101/send-report",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Assessment-ID",
+              "value": "b1cfdf5f09d60aa8acfd89fe3d3db9d5"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "report",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1792,
+        368
+      ],
+      "id": "a1f945ed-777e-41a4-98eb-c25163d4d7e5",
+      "name": "SendReport",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "A22L96VZ749ng8HE",
+          "name": "n8n Academy API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Academy Section 2 Sales Data Papeline\n\nCreated By: Salma ECHCHERQAOUI\nDate: 19 / 07 / 2026\n\nThis warehouse creates the sales data papeline including 3 branches for sending different reports and details to the data warehouse.\n\nPart of: n8n fondations course, Section 2.",
+        "height": 208,
+        "width": 592
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1616,
+        -48
+      ],
+      "typeVersion": 1,
+      "id": "8945fc46-124d-4a0b-8c2a-f8262343feff",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        816,
+        464
+      ],
+      "id": "757f4087-5f25-4400-9e7f-9d73d92d264d",
+      "name": "IgnoreNonDelivered"
+    },
+    {
+      "parameters": {
+        "content": "**pending, cancelled orders** ",
+        "height": 80,
+        "width": 176
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        784,
+        448
+      ],
+      "typeVersion": 1,
+      "id": "95909405-e9cb-49b9-80a9-13510f542b98",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=Sales pipeline complete. {{ $json.orders_received }} orders processed, {{ $('CountDelivered').all()[0].json.count_order_id}} delivered: {{\n$('SummarizeByRegion').all()[0].json.sum_order_total }} as order totals for {{ $('SummarizeByRegion').all()[0].json.region }}, {{ $('SummarizeByRegion').all()[1].json.sum_order_total }} as order totals for {{ $('SummarizeByRegion').all()[1].json.region }}, {{ $('SummarizeByRegion').all()[2].json.sum_order_total }} as order totals for {{ $('SummarizeByRegion').all()[2].json.region }} and {{ $('SummarizeByRegion').all()[3].json.sum_order_total }} as order totals for {{ $('SummarizeByRegion').all()[3].json.region }}.\t\n\t\n\t\n ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        0
+      ],
+      "id": "58765feb-50a7-4452-8fb6-4e65d8d3ec3c",
+      "name": "Send a NotifyTeam",
+      "webhookId": "055f5e3f-6330-42fa-afd9-f529e15cdb54",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "mLxRn4bn2EutLgsg",
+          "name": "n8n Quickstart S1 Discord Webhook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "echcherqaouisalma@gmail.com",
+        "subject": "Sales report",
+        "emailType": "text",
+        "message": "=total revenue:{{ $('SummarizeByRegion').all()[0].json.sum_order_total + $('SummarizeByRegion').all()[1].json.sum_order_total +  $('SummarizeByRegion').all()[2].json.sum_order_total +  $('SummarizeByRegion').all()[3].json.sum_order_total  }}   , top region: {{ $('SummarizeByRegion').item.json.region }}, order count: {{ $('CountDelivered').all()[0].json.count_order_id}}.",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "report"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1872,
+        560
+      ],
+      "id": "85569f80-88c0-456a-949b-5aba7eda02d6",
+      "name": "Send a message",
+      "webhookId": "f16f8b41-c627-4677-9e73-91e4cad88080"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c11c1c7a-eedb-4883-bb0f-9f4091c372cc",
+              "leftValue": "={{ $json.count_order_total }}",
+              "rightValue": 2,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        480
+      ],
+      "id": "656f81aa-9974-47ab-b4a4-bd5fc54d442c",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=Warning: {{ $json.region }} region has only {{ $json.count_order_total }} orders this period ",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        1296,
+        544
+      ],
+      "id": "b4f340be-e837-45ee-9931-b2e5ff9c4c95",
+      "name": "Send a message2",
+      "webhookId": "820828d0-6a86-4931-8207-4d043520d971"
+    },
+    {
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [
+            {
+              "field": "order_id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.summarize",
+      "typeVersion": 1.1,
+      "position": [
+        976,
+        160
+      ],
+      "id": "bdd25cee-4110-425f-84c3-8d50f5628508",
+      "name": "CountDelivered"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "TriggerManual": {
+      "main": [
+        [
+          {
+            "node": "GetSalesData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetSalesData": {
+      "main": [
+        [
+          {
+            "node": "SplitOrders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SplitOrders": {
+      "main": [
+        [
+          {
+            "node": "SetOrderTotals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SetOrderTotals": {
+      "main": [
+        [
+          {
+            "node": "FilterDelivered",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AggregateOrders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AggregateOrders": {
+      "main": [
+        [
+          {
+            "node": "SendOrders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FilterDelivered": {
+      "main": [
+        [
+          {
+            "node": "SummarizeByRegion",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "CountDelivered",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IgnoreNonDelivered",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SummarizeByRegion": {
+      "main": [
+        [
+          {
+            "node": "UpdateFieldNames",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UpdateFieldNames": {
+      "main": [
+        [
+          {
+            "node": "AggregateRegions",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SetReportMetadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AggregateRegions": {
+      "main": [
+        [
+          {
+            "node": "SendAnalysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SetReportMetadata": {
+      "main": [
+        [
+          {
+            "node": "ConvertToCSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ConvertToCSV": {
+      "main": [
+        [
+          {
+            "node": "SendReport",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SendOrders": {
+      "main": [
+        [
+          {
+            "node": "Send a NotifyTeam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message2": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "7ed595e8-cffa-420b-bd85-38c2c804de20",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1c5d83dcf2837c5c0b30ea27897c587f3557d43f828eb309520227db1354081c"
+  },
+  "nodeGroups": [],
+  "id": "lu2Scxf1VwJa2ZKV",
+  "tags": [
+    {
+      "name": "n8n101",
+      "id": "9mNxE34sFPIpOTXc",
+      "updatedAt": "2026-07-14T19:11:08.630Z",
+      "createdAt": "2026-07-14T19:11:08.630Z"
+    }
+  ]
+}
